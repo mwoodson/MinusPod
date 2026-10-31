@@ -21,6 +21,12 @@ release notes.
 
 - The "Questions per API request" help text and docs note that some third-party endpoints cap questions per request and that detection sends one question per transcript segment (#917).
 
+### Changed
+
+- Docker build: A SECURITY_SRC=stub build argument skips the patched security
+  package builds and uses stock Ubuntu packages, for faster local development builds.
+  Published images keep the default.
+
 ## [2.101.9] - 2026-10-30
 
 ### Fixed
