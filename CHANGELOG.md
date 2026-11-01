@@ -9,7 +9,32 @@ Alongside the standard sections, a "Breaking" section marks changes
 that require operator action; these are surfaced at the top of stable
 release notes.
 
-## [Unreleased]
+## [2.101.11] - 2026-10-31
+
+### Added
+
+- Add feed searches YouTube by show name when YouTube feeds are on.
+  Playlists and channels appear under the directory results, playlists
+  marked as podcast shows rank higher with a Podcast badge, and choosing
+  one opens the lookup card with its RSS directory matches. Works with or
+  without a Data API key.
+- YouTube episodes can send ads to SponsorBlock by hand. SponsorBlock forbids
+  automated submissions, so nothing is ever sent on its own. A setting and a
+  private user ID enable a per-episode review where every segment starts
+  unchecked and each outcome is recorded.
+- Settings > YouTube can generate a SponsorBlock private user ID for people
+  without the browser extension. The stored ID is hidden by default with
+  Show and Copy buttons, and cannot be regenerated while one is stored.
+- Episodes take a 1 to 5 star quality rating with notes below 5. Five stars
+  confirms every cut ad segment without a recut. Feeds show the average, and
+  the diagnostics download includes the ratings and notes for its range.
+- The transcript dialog's search can show one or three neighbouring segments
+  around each match, jump to a match inside the full transcript, and step
+  through matches with Previous and Next or Enter.
+- The YouTube watcher notices when the SponsorBlock API stops answering
+  and checks it until it is back. While it is unreachable, YouTube episodes waiting on it are held with no downloads or
+  attempts counted, SponsorBlock submissions are refused, and the status bar
+  shows SponsorBlock as unreachable. Other feeds keep processing.
 
 ### Changed
 

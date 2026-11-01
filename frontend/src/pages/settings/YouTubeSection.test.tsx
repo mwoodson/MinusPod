@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import YouTubeSection from './YouTubeSection';
 import type { YouTubeSettings } from '../../api/youtube';
 import { hasUnsavedChanges } from '../../hooks/useUnsavedChanges';
+import { ApiError } from '../../api/client';
 
 const mockGet = vi.fn();
 const mockUpdate = vi.fn();
@@ -13,6 +14,12 @@ const mockSaveCookies = vi.fn();
 const mockClearCookies = vi.fn();
 const mockUpdateNow = vi.fn();
 const mockReset = vi.fn();
+const mockGenerate = vi.fn();
+const mockGetId = vi.fn();
+vi.mock('../../api/settings', () => ({
+  generateSbUserId: (...a: unknown[]) => mockGenerate(...a),
+  getSbUserId: (...a: unknown[]) => mockGetId(...a),
+}));
 vi.mock('../../api/youtube', () => ({
   getYouTubeSettings: (...a: unknown[]) => mockGet(...a),
   updateYouTubeSettings: (...a: unknown[]) => mockUpdate(...a),
@@ -24,7 +31,7 @@ vi.mock('../../api/youtube', () => ({
 }));
 
 const base: YouTubeSettings = {
-  enabled: false, apiKeyConfigured: false, processDelayMinutes: 60, sbProbeAttempts: 6,
+  enabled: false, apiKeyConfigured: false, sbSubmitEnabled: false, sbUserIdConfigured: false, sbUserIdGenerated: false, processDelayMinutes: 60, sbProbeAttempts: 6,
   sbProbeIntervalMinutes: 30, sbWatchIntervalHours: 6, sbWatchMaxDays: 7, llmFallback: true,
   captionsAsTranscript: true, hidePrivate: true, transcribeFallback: false, ytdlpExtraArgs: '', proxyUrl: '',
   ytdlp: { autoUpdate: true, version: '2026.10.26', lastUpdateAt: null, lastCheckAt: null, lastError: null,
@@ -121,6 +128,39 @@ describe('YouTubeSection', () => {
     expect(mockUpdate).toHaveBeenCalledWith({ apiKey: 'AIzaSyTEST' });
   });
 
+  it('saves the SponsorBlock submissions toggle', async () => {
+    mockUpdate.mockResolvedValue({ ...base, sbSubmitEnabled: true });
+    renderSection();
+    await userEvent.click(await screen.findByRole('switch', { name: 'Allow SponsorBlock submissions' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith({ sbSubmitEnabled: true }));
+  });
+
+  it('saves and clears the SponsorBlock user ID', async () => {
+    mockUpdate.mockResolvedValue({ ...base, sbUserIdConfigured: true, sbUserIdGenerated: false });
+    renderSection();
+    const input = await screen.findByLabelText('SponsorBlock private user ID') as HTMLInputElement;
+    expect(input.type).toBe('password');
+    expect(screen.queryByRole('button', { name: 'Clear user ID' })).toBeNull();
+    await userEvent.type(input, 'secret-id');
+    expect(hasUnsavedChanges()).toBe(true);
+    await userEvent.click(screen.getByRole('button', { name: 'Save user ID' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith({ sbUserId: 'secret-id' }));
+    await waitFor(() => expect(input.value).toBe(''));
+    expect(await screen.findByPlaceholderText('Stored')).toBeDefined();
+    mockUpdate.mockResolvedValue(base);
+    await userEvent.click(screen.getByRole('button', { name: 'Clear user ID' }));
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith({ sbUserId: null }));
+  });
+
+  it('warns when submissions are enabled without a user ID and not when one is stored', async () => {
+    const { unmount } = renderSection({ ...base, sbSubmitEnabled: true });
+    expect(await screen.findByText(/no sponsorblock private user id is saved/i)).toBeDefined();
+    unmount();
+    renderSection({ ...base, sbSubmitEnabled: true, sbUserIdConfigured: true });
+    await screen.findByRole('switch', { name: 'Allow SponsorBlock submissions' });
+    expect(screen.queryByText(/no sponsorblock private user id/i)).toBeNull();
+  });
+
   it('saves cookies and shows the status', async () => {
     mockSaveCookies.mockResolvedValue({ set: true, lines: 12, updatedAt: '2026-10-29T10:00:00Z' });
     renderSection();
@@ -140,7 +180,7 @@ describe('YouTubeSection', () => {
     mockReset.mockResolvedValue(base);
     renderSection({ ...base, processDelayMinutes: 5 });
     await userEvent.click(await screen.findByRole('button', { name: 'Reset to defaults' }));
-    expect(screen.getByText(/including the daily yt-dlp update toggle\? The feature switch, Data API key and cookies file are kept/)).toBeDefined();
+    expect(screen.getByText(/including the daily yt-dlp update toggle\? The feature switch, Data API key, SponsorBlock user ID and cookies file are kept/)).toBeDefined();
     expect(mockReset).not.toHaveBeenCalled();
     const getCalls = mockGet.mock.calls.length;
     await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reset to defaults' }));
@@ -171,5 +211,81 @@ describe('YouTubeSection', () => {
     expect(hasUnsavedChanges()).toBe(true);
     view.unmount();
     expect(hasUnsavedChanges()).toBe(false);
+  });
+
+  describe('SponsorBlock user ID', () => {
+    const NEW_ID = 'a'.repeat(48);
+    const configured = { ...base, sbUserIdConfigured: true, sbUserIdGenerated: true };
+    const pasted = { ...base, sbUserIdConfigured: true, sbUserIdGenerated: false };
+
+    it('generates, shows the ID revealed with Copy and hides Generate', async () => {
+      mockGenerate.mockResolvedValue({ sbUserId: NEW_ID });
+      renderSection();
+      const generate = await screen.findByRole('button', { name: 'Generate' });
+      mockGet.mockResolvedValue(configured);
+      await userEvent.click(generate);
+      await waitFor(() => expect(mockGenerate).toHaveBeenCalled());
+      await waitFor(() => expect(mockGet).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText(NEW_ID)).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Copy' })).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Hide' }).getAttribute('aria-pressed')).toBe('true');
+      expect(screen.getByText(/Keep this private\. Anyone with it can submit as you\./)).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Generate' })).toBeNull();
+    });
+
+    it('shows a masked value when configured and reveals and hides it', async () => {
+      mockGetId.mockResolvedValue({ sbUserId: NEW_ID });
+      renderSection(configured);
+      expect(await screen.findByTestId('sb-user-id-value')).toBeDefined();
+      expect(screen.queryByText(NEW_ID)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Generate' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Copy' })).toBeNull();
+      const show = screen.getByRole('button', { name: 'Show' });
+      expect(show.getAttribute('aria-pressed')).toBe('false');
+      await userEvent.click(show);
+      expect(await screen.findByText(NEW_ID)).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Copy' })).toBeDefined();
+      await userEvent.click(screen.getByRole('button', { name: 'Hide' }));
+      expect(screen.queryByText(NEW_ID)).toBeNull();
+      expect(mockGetId).toHaveBeenCalledTimes(1);
+      expect(mockGenerate).not.toHaveBeenCalled();
+    });
+
+    it('hides Save and Clear for a generated ID and shows Clear for a pasted one', async () => {
+      const view = renderSection(configured);
+      await screen.findByRole('button', { name: 'Show' });
+      expect(screen.queryByRole('button', { name: 'Clear user ID' })).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Save user ID' })).toBeNull();
+      view.unmount();
+      renderSection(pasted);
+      expect(await screen.findByRole('button', { name: 'Clear user ID' })).toBeDefined();
+      expect(screen.getByRole('button', { name: 'Show' })).toBeDefined();
+      expect(screen.queryByRole('button', { name: 'Generate' })).toBeNull();
+    });
+
+    it('explains a generated 409 on clear', async () => {
+      mockUpdate.mockRejectedValueOnce(new ApiError('generated', 409));
+      renderSection(pasted);
+      await userEvent.click(await screen.findByRole('button', { name: 'Clear user ID' }));
+      expect((await screen.findByRole('alert')).textContent).toMatch(/cannot be cleared or replaced/);
+    });
+
+    it('tells the configured and crypto-unavailable 409s apart', async () => {
+      mockGenerate.mockRejectedValueOnce(new ApiError('configured', 409));
+      renderSection();
+      await userEvent.click(await screen.findByRole('button', { name: 'Generate' }));
+      expect((await screen.findByRole('alert')).textContent).toMatch(/already saved/);
+      mockGenerate.mockRejectedValueOnce(new ApiError('provider_crypto_unavailable', 409));
+      await userEvent.click(screen.getByRole('button', { name: 'Generate' }));
+      await waitFor(() => expect(screen.getByRole('alert').textContent).toMatch(/encryption is unavailable/));
+      expect(screen.queryByText(NEW_ID)).toBeNull();
+    });
+
+    it('shows an error when the stored ID cannot be read', async () => {
+      mockGetId.mockRejectedValueOnce(new ApiError('not_configured', 404));
+      renderSection(configured);
+      await userEvent.click(await screen.findByRole('button', { name: 'Show' }));
+      expect((await screen.findByRole('alert')).textContent).toMatch(/not_configured/);
+    });
   });
 });

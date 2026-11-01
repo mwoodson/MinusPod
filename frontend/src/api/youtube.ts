@@ -5,6 +5,9 @@ export const YOUTUBE_KIND_LABELS = { channel: 'Channel', playlist: 'Playlist', v
 export interface YouTubeSettings {
   enabled: boolean;
   apiKeyConfigured: boolean;
+  sbSubmitEnabled: boolean;
+  sbUserIdConfigured: boolean;
+  sbUserIdGenerated: boolean;
   processDelayMinutes: number;
   sbProbeAttempts: number;
   sbProbeIntervalMinutes: number;
@@ -34,7 +37,7 @@ export interface YouTubeSettings {
 export type YouTubeSettingsUpdate = Partial<Pick<YouTubeSettings,
   'enabled' | 'processDelayMinutes' | 'sbProbeAttempts' | 'sbProbeIntervalMinutes'
   | 'sbWatchIntervalHours' | 'sbWatchMaxDays' | 'llmFallback' | 'captionsAsTranscript' | 'hidePrivate' | 'transcribeFallback' | 'ytdlpExtraArgs' | 'proxyUrl'>>
-  & { apiKey?: string | null; ytdlpAutoUpdate?: boolean };
+  & { apiKey?: string | null; ytdlpAutoUpdate?: boolean; sbSubmitEnabled?: boolean; sbUserId?: string | null };
 
 export interface YouTubePreview {
   enabled: boolean;
@@ -49,6 +52,25 @@ export interface YouTubePreview {
     alreadyAdded: string | null;
   } | null;
   rssMatches: { title: string; feedUrl: string; artworkUrl: string }[];
+}
+
+export interface YouTubeSearchResult {
+  kind: 'playlist' | 'channel';
+  id: string;
+  title: string;
+  channelTitle: string;
+  videoCount: number | null;
+  podcast: boolean | null;
+  artworkUrl: string | null;
+  url: string;
+}
+
+export async function searchYouTube(query: string, signal?: AbortSignal): Promise<YouTubeSearchResult[]> {
+  const data = await apiRequest<{ enabled: boolean; results: YouTubeSearchResult[] }>(
+    `/youtube/search?q=${encodeURIComponent(query)}`,
+    { signal },
+  );
+  return data.enabled ? data.results : [];
 }
 
 export async function getYouTubeSettings(): Promise<YouTubeSettings> {

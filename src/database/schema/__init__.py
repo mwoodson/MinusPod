@@ -704,6 +704,13 @@ class SchemaMixin:
             self._add_column_if_missing(
                 conn, 'episodes', 'deletion_requested_at', 'TEXT', episode_cols)
             for col, definition in (
+                    ('quality_rating', 'INTEGER'),
+                    ('quality_notes', 'TEXT'),
+                    ('quality_rated_at', 'TEXT')):
+                self._add_column_if_missing(conn, 'episodes', col, definition, episode_cols)
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_episodes_quality_rated_at "
+                         "ON episodes(quality_rated_at) WHERE quality_rating IS NOT NULL")
+            for col, definition in (
                     ('youtube_video_id', 'TEXT'),
                     ('sb_state', 'TEXT'),
                     ('sb_next_check_at', 'TEXT'),
@@ -711,10 +718,13 @@ class SchemaMixin:
                     ('sb_segment_uuids', 'TEXT'),
                     ('sb_last_error', 'TEXT'),
                     ('sb_note', 'TEXT'),
+                    ('sb_submissions', 'TEXT'),
                     ('yt_metadata_at', 'TEXT')):
                 self._add_column_if_missing(conn, 'episodes', col, definition, episode_cols)
             conn.execute("CREATE INDEX IF NOT EXISTS idx_episodes_sb_next_check "
                          "ON episodes(sb_next_check_at) WHERE sb_next_check_at IS NOT NULL")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_episodes_sb_waiting "
+                         "ON episodes(sb_state) WHERE sb_state IN ('waiting','probing')")
 
         # -- audio_cue_templates table columns --
         act_cols = self._get_table_columns(conn, 'audio_cue_templates')

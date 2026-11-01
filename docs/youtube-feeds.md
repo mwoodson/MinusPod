@@ -15,6 +15,7 @@
 - [Shorts and duration filters](#shorts-and-duration-filters)
 - [Private and deleted episodes](#private-and-deleted-episodes)
 - [SponsorBlock categories](#sponsorblock-categories)
+- [Submitting confirmed ads to SponsorBlock](#submitting-confirmed-ads-to-sponsorblock)
 - [Cookies](#cookies)
 - [yt-dlp](#yt-dlp)
 - [Per-feed overrides](#per-feed-overrides)
@@ -22,6 +23,10 @@
 - [Licensing](#licensing)
 - [Troubleshooting](#troubleshooting)
 - [Reference](#reference)
+
+Adding a show by name, SponsorBlock marks on an episode, the rating, submitting reviewed segments, the status bar during a SponsorBlock outage and the settings. Portrait cut and the file itself in [Videos](videos/README.md).
+
+https://github.com/user-attachments/assets/5ba14213-c2f7-4bec-a70d-b7d722a7209d
 
 ## What a YouTube feed is
 
@@ -66,6 +71,8 @@ Without a key, yt-dlp listings carry no episode descriptions and only a date for
 ## Adding a playlist or channel
 
 On the Add feed page, paste a YouTube address and choose **Look up**. The card shows the title, artwork, video count and any podcast directory matches that offer the same show as an RSS feed. If a directory match exists, prefer the RSS feed: it is the publisher's own audio. To use the YouTube source anyway, choose **Add YouTube feed**. The page also keeps the normal RSS form under **Or add by RSS feed**.
+
+Typing a show name instead of an address searches YouTube. Matching playlists and channels are listed under the directory results. The search reads the Podcasts tab of up to three channels from the results. A playlist is marked as a podcast when that tab lists it, and marked playlists rank higher. Choosing one opens the same lookup card, including any RSS directory matches. Without a Data API key a search usually takes a few seconds.
 
 Accepted forms:
 
@@ -156,6 +163,32 @@ SponsorBlock categories map to MinusPod segment categories:
 | preview | recap |
 
 What happens to a mark is decided by the per-category segment action in Settings > Segment categories, with a per-feed override: Remove, Beep, Keep or Mark. A SponsorBlock `mute` mark is beeped when its category is set to cut, and left alone when the category is set to keep or mark. The `full` action (the whole video is a sponsored segment) is never cut; it only adds the note shown in the episode state.
+
+When a SponsorBlock lookup fails, the watcher marks the API as down and checks it on every pass until it answers again. While it is unreachable, YouTube episodes waiting on it are held without counting attempts, submissions are refused, and the status bar shows SponsorBlock as unreachable. Other feeds keep processing, and the held episodes resume on the next pass once it is back.
+
+## Submitting confirmed ads to SponsorBlock
+
+MinusPod can help you send the ads it cut back to SponsorBlock, but only by hand. SponsorBlock's rules forbid automated submissions, so MinusPod never submits on its own. A person reviews each segment and chooses to send it.
+
+Turn on **Allow SponsorBlock submissions** in Settings > YouTube and enter your SponsorBlock user ID. It is off by default. The ID is stored encrypted and hidden by default; **Show** reveals it and **Copy** copies it. Each submission carries the reputation of that ID, so use an account you are willing to be judged by.
+
+You do not need the SponsorBlock browser extension. Choose **Generate** beside the field and MinusPod makes a random ID and stores it. Use **Show** and **Copy** any time to read the stored ID. Pasting it into the extension under Options, Import lets you see your submissions there. Generate only works while no ID is stored, and a generated ID cannot be cleared or replaced. **Clear user ID** only applies to an ID you pasted yourself. A new ID has no reputation, so its first segments stay hidden from other users until they are upvoted.
+
+On the episode page of a YouTube episode, open the SponsorBlock review. Every box starts unchecked. Each segment has a play button so you can listen to the span before ticking it. Tick the segments you have checked against the video, then choose **Submit**. A request sends at most 20 segments. Submission waits until SponsorBlock has confirmed the video has no community marks.
+
+A segment is listed when all of these hold:
+
+- The episode belongs to a YouTube feed.
+- SponsorBlock had no community marks for the video.
+- The segment is a sponsor or self promotion cut.
+- The segment has evidence beyond the LLM, such as a verified span, a reviewer confirmation, a fingerprint or pattern match, or your own confirmation.
+- The segment is not held for review.
+
+Each row shows its evidence. Giving the episode 5 stars confirms every cut segment, so they all qualify afterwards.
+
+MinusPod records the outcome of each segment on the episode: submitted, duplicate, rejected, rate limited or error. Submitted and duplicate segments are shown greyed out and cannot be sent again. A rejected, rate limited or failed segment can be sent again. The user ID is never logged.
+
+Read the SponsorBlock guidelines on segment timing and categories before you submit.
 
 ## Cookies
 

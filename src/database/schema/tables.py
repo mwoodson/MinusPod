@@ -233,7 +233,11 @@ TABLE_DDL['episodes'] = """CREATE TABLE IF NOT EXISTS episodes (
     sb_segment_uuids TEXT,
     sb_last_error TEXT,
     sb_note TEXT,
+    sb_submissions TEXT,
     yt_metadata_at TEXT,
+    quality_rating INTEGER,
+    quality_notes TEXT,
+    quality_rated_at TEXT,
     created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     updated_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
     FOREIGN KEY (podcast_id) REFERENCES podcasts(id) ON DELETE CASCADE,
@@ -945,6 +949,7 @@ CREATE INDEX IF NOT EXISTS idx_episodes_podcast_episode ON episodes(podcast_id, 
 CREATE INDEX IF NOT EXISTS idx_episodes_status ON episodes(status);
 CREATE INDEX IF NOT EXISTS idx_episodes_created_at ON episodes(created_at);
 CREATE INDEX IF NOT EXISTS idx_episodes_sb_next_check ON episodes(sb_next_check_at) WHERE sb_next_check_at IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_episodes_sb_waiting ON episodes(sb_state) WHERE sb_state IN ('waiting','probing');
 
 -- Cross-episode training indexes (indexes on new columns created in migrations)
 CREATE INDEX IF NOT EXISTS idx_patterns_sponsor_id ON ad_patterns(sponsor_id) WHERE is_active = 1;

@@ -10,6 +10,7 @@
 - [Saving and updates](#saving-and-updates)
 - [Install as an app](#install-as-an-app)
 - [Dashboard views](#dashboard-views)
+- [Episode rating](#episode-rating)
 - [Episode actions and job state](#episode-actions-and-job-state)
 - [Feed Display Title](#feed-display-title)
 - [Sponsors and Normalizations](#sponsors-and-normalizations)
@@ -30,7 +31,7 @@
 
 A tour of the web UI: dashboard, queue, detected ads, the waveform editor, review, patterns, search, stats and settings. Portrait cut and the file itself in [Videos](videos/README.md).
 
-https://github.com/user-attachments/assets/3c64b0eb-5b52-457a-bd94-17b7ecdeef2c
+https://github.com/user-attachments/assets/26e4f083-a398-44b4-ad22-e6f753e03f52
 
 ## Overview
 
@@ -39,7 +40,7 @@ The server includes a web-based management UI at `/ui/`. Opening the server root
 - Dashboard with feed artwork and episode counts
 - Add feeds by RSS URL with optional episode cap
 - Add a YouTube playlist or channel: the Add feed page has a **Look up** card that resolves a pasted address, shows the title, artwork, video count and any RSS directory matches, and offers **Add YouTube feed**. Appears only when YouTube feeds are enabled. See [YouTube Feeds](youtube-feeds.md#adding-a-playlist-or-channel)
-- Settings > YouTube section: the **Enable YouTube feeds** switch, the optional Data API key with **Save key**, **Clear key** and **Test key**, the processing delay, probe and watch fields, the LLM fallback and captions toggles, a **Cookies** box, and the yt-dlp status with **Update yt-dlp daily** and **Update now**. See [YouTube Feeds](youtube-feeds.md#enabling-the-feature)
+- Settings > YouTube section: the **Enable YouTube feeds** switch, the optional Data API key with **Save key**, **Clear key** and **Test key**, the processing delay, probe and watch fields, the LLM fallback and captions toggles, the SponsorBlock private user ID with **Show**, **Copy** and **Generate** (Generate works only while no ID is stored), a **Cookies** box, and the yt-dlp status with **Update yt-dlp daily** and **Update now**. See [YouTube Feeds](youtube-feeds.md#enabling-the-feature)
 - YouTube feeds carry a YouTube badge. Their feed page has a YouTube section with an **Open on YouTube** link, artwork upload and refresh, and the per-feed overrides (LLM fallback, Pass 1 detection, Captions, Shorts, Delay, Probe attempts, Probe interval). Episodes show a SponsorBlock state line such as `Waiting for SponsorBlock, attempt 2 of 6, next check in 30 min` or `SponsorBlock: 3 segments`; the full list is in [YouTube Feeds](youtube-feeds.md#episode-states)
 - Feed management: refresh, delete, copy URLs, editable display title, set network override, per-feed episode cap, per-feed transcription language override, per-feed detection notes (free text the model sees with every episode of that show; see [Configuration > Per-feed detection notes](configuration.md#per-feed-detection-notes)), per-feed chapter mode (keep the show's own chapters or always generate; see [Podcasting 2.0](podcasting-2.0.md)), per-feed cue match threshold and cue tuning overrides, silence-snap and transition-snap toggles (see [Audio Cue Detection](audio-cues.md))
 - Deleting a podcast stops any episode still processing; the delete confirmation says so when one is active
@@ -152,6 +153,12 @@ The POST form avoids URL-length limits for large selections. See
 
 A completed episode plays in a built-in player instead of the browser's native controls. When the episode has chapters, a row above the scrubber shows the current chapter title with previous and next chapter buttons. Previous restarts the current chapter when you are more than 3 seconds into it, otherwise it jumps to the chapter before. The scrubber marks chapter starts and shows elapsed and remaining time. Below it are skip back 15 seconds, play and pause, skip forward 30 seconds, and a speed button that cycles 1x, 1.25x, 1.5x, 1.75x, 2x and 0.8x. The speed is remembered per browser. With focus on the player, Space plays or pauses, Left Arrow skips back 15 seconds and Right Arrow skips forward 30 seconds. The episode description and chapter notes sit under the player, collapsed to a few lines with a Show more button when they are long.
 
+### Episode rating
+
+Rate how well MinusPod handled an episode from 1 to 5 stars on the episode page. Below 5 stars you can add notes of up to 2000 characters. Giving 5 stars clears any notes and records a confirm correction for every cut ad marker except community marks. This is the same as pressing Confirm on each, including pattern learning. The next reprocess force-accepts those spans. The audio is not changed and no recut is queued. Clearing a rating removes the stars and notes; confirmations already recorded stay.
+
+A feed's page shows the average rating and how many episodes are rated. Ratings and their notes are part of the diagnostics download, which includes up to 500 rated episodes in the chosen range, with how many segments were cut, kept and held.
+
 ### Episode actions and job state
 
 Process, Reprocess, Re-detect Ads, and Recut all read their enabled state from the server's authoritative view of whether a job is queued or running, rather than guessing from the episode's stored status. In the UI that means:
@@ -203,7 +210,7 @@ Any single feed can override the retention window and the keep-original toggle o
 
 Original audio has its own retention input under the same section: "Retain original audio for: N days". Defaults to whatever the processed retention is. Set a smaller number to drop the pre-cut copy sooner while keeping the processed file for the full retention period (useful if originals are taking too much disk but you still want the processed output around for the normal 30-day window). Capped at the processed retention by the server; the input is disabled when "Keep original audio" is off.
 
-The **Transcript** section on the Episode Detail page has one View transcript button. It opens a reader with a source select, Original for the full pre-cut text or Processed for what is served, and every segment carries its timestamps. There is a search box that marks each match, a start and end time window, and, on the original, a Highlight ads checkbox that tints the rows that were cut and names the sponsor.
+The **Transcript** section on the Episode Detail page has one View transcript button. It opens a reader with a source select, Original for the full pre-cut text or Processed for what is served, and every segment carries its timestamps. There is a search box that marks each match, a start and end time window, and, on the original, a Highlight ads checkbox that tints the rows that were cut and names the sponsor. With a search term set, the Context control shows one or three neighbouring segments around each match, muted so the match stands out. Each match has a Show in transcript button that opens the full transcript at that segment and flashes it; a Back to matches link returns to the results. Previous and Next in the footer, or Enter in the search box, step through the matches.
 
 ### Waveform Ad Editor
 

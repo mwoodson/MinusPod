@@ -1,7 +1,7 @@
 """YouTube feed and SponsorBlock state queries."""
 SB_COLUMNS = frozenset({
     'youtube_video_id', 'sb_state', 'sb_next_check_at', 'sb_attempts',
-    'sb_segment_uuids', 'sb_last_error', 'sb_note',
+    'sb_segment_uuids', 'sb_last_error', 'sb_note', 'sb_submissions',
 })
 
 
@@ -57,6 +57,11 @@ class YouTubeMixin:
             "UPDATE episodes SET sb_next_check_at = NULL WHERE id = ? AND sb_next_check_at IS NOT NULL", (db_id,))
         conn.commit()
         return cur.rowcount > 0
+
+    def count_sponsorblock_waiting(self) -> int:
+        row = self.get_connection().execute(
+            "SELECT COUNT(*) FROM episodes WHERE sb_state IN ('waiting', 'probing')").fetchone()
+        return row[0]
 
     def get_due_sponsorblock_episodes(self, now_iso: str, limit: int = 50) -> list[dict]:
         cursor = self.get_connection().execute(
